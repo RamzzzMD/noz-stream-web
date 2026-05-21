@@ -3,30 +3,114 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Noz Stream - Home</title>
+  <title>NozStream API - Video Streaming Scraper</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    .hero-bg {
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    }
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    }
+  </style>
 </head>
-<body class="bg-zinc-950 text-white min-h-screen">
-  <nav class="bg-black sticky top-0 z-50 border-b border-zinc-800">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-      <h1 class="text-3xl font-bold text-red-600">Noz<span class="text-white">Stream</span></h1>
-      <div class="flex items-center gap-8">
-        <a href="index.html" class="hover:text-red-500 font-medium">Home</a>
-        <a href="browse.html" class="hover:text-red-500 font-medium">Browse</a>
-        <a href="search.html" class="hover:text-red-500 font-medium">Search</a>
+<body class="bg-zinc-950 text-zinc-200">
+
+  <!-- Navbar -->
+  <nav class="border-b border-zinc-800 bg-black/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 py-5 flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl font-bold text-red-600">Noz</span>
+        <span class="text-3xl font-light tracking-tight">Stream</span>
       </div>
+      <div class="text-sm text-zinc-400 font-medium">Public Video API</div>
     </div>
   </nav>
 
-  <main class="max-w-7xl mx-auto px-4 py-8">
-    <section id="latest-section" class="mb-12"></section>
-    <section id="trending-section" class="mb-12"></section>
-  </main>
+  <!-- Hero Section -->
+  <section class="hero-bg py-24">
+    <div class="max-w-6xl mx-auto px-6 text-center">
+      <h1 class="text-6xl md:text-7xl font-bold tracking-tighter mb-6">
+        Akses Video<br>dengan Mudah
+      </h1>
+      <p class="text-xl text-zinc-400 max-w-2xl mx-auto">
+        API scraping cepat & stabil untuk mengambil data video, thumbnail, embed, dan informasi lengkap dari sumber terpercaya.
+      </p>
+      
+      <div class="mt-10 flex justify-center gap-4">
+        <a href="#endpoints" 
+           class="px-8 py-4 bg-red-600 hover:bg-red-700 rounded-xl font-semibold text-lg transition">
+          Lihat Endpoint
+        </a>
+        <a href="https://github.com" target="_blank"
+           class="px-8 py-4 border border-zinc-700 hover:border-zinc-500 rounded-xl font-semibold text-lg transition">
+          Dokumentasi
+        </a>
+      </div>
+    </div>
+  </section>
 
-  <script src="assets/js/main.js"></script>
+  <!-- Endpoints -->
+  <section id="endpoints" class="py-20 bg-zinc-900">
+    <div class="max-w-6xl mx-auto px-6">
+      <h2 class="text-4xl font-bold text-center mb-12">Available Endpoints</h2>
+      
+      <div class="grid md:grid-cols-2 gap-6">
+        
+        <div class="bg-zinc-800/50 border border-zinc-700 rounded-2xl p-8 card-hover">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="bg-emerald-500 text-white text-xs font-mono px-3 py-1 rounded">GET</span>
+            <code class="text-blue-400 font-medium">/api/home</code>
+          </div>
+          <p class="text-zinc-400">Ambil video terbaru dan trending dari halaman utama.</p>
+        </div>
+
+        <div class="bg-zinc-800/50 border border-zinc-700 rounded-2xl p-8 card-hover">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="bg-emerald-500 text-white text-xs font-mono px-3 py-1 rounded">GET</span>
+            <code class="text-blue-400 font-medium">/api/search?q=...</code>
+          </div>
+          <p class="text-zinc-400">Pencarian video dengan dukungan pagination.</p>
+        </div>
+
+        <div class="bg-zinc-800/50 border border-zinc-700 rounded-2xl p-8 card-hover">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="bg-emerald-500 text-white text-xs font-mono px-3 py-1 rounded">GET</span>
+            <code class="text-blue-400 font-medium">/api/category?slug=...</code>
+          </div>
+          <p class="text-zinc-400">Browse video berdasarkan kategori.</p>
+        </div>
+
+        <div class="bg-zinc-800/50 border border-zinc-700 rounded-2xl p-8 card-hover">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="bg-emerald-500 text-white text-xs font-mono px-3 py-1 rounded">GET</span>
+            <code class="text-blue-400 font-medium">/api/detail?url=...</code>
+          </div>
+          <p class="text-zinc-400">Detail lengkap video (embed, duration, tags, related).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Base URL -->
+  <div class="bg-black py-8">
+    <div class="max-w-6xl mx-auto px-6 text-center">
+      <p class="text-zinc-500 text-sm mb-2">Base URL</p>
+      <p id="baseurl" class="font-mono text-lg text-zinc-300 break-all"></p>
+    </div>
+  </div>
+
+  <footer class="py-10 text-center text-zinc-500 text-sm">
+    <p>NozStream API • Built for personal & educational use</p>
+  </footer>
+
   <script>
-    window.onload = loadHome;
+    document.getElementById('baseurl').textContent = window.location.origin;
   </script>
 </body>
 </html>
