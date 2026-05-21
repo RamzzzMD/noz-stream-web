@@ -33,7 +33,7 @@
       if (!url) return;
 
       try {
-        const res = await fetch(`https://YOUR-VERCEL-URL.vercel.app/api/detail?url=${encodeURIComponent(url)}`);
+        const res = await fetch(`https://noz-stream-web.vercel.app/api/detail?url=${encodeURIComponent(url)}`);
         const data = await res.json();
 
         document.getElementById('player').src = data.embed_url;
