@@ -5,19 +5,16 @@ const cheerio = require('cheerio');
 const cors = require('cors');
 
 const app = express();
-// CORS ini biarkan ada, karena fungsinya agar Frontend Anda bisa mengakses API Node.js Anda sendiri
 app.use(cors());
 
-// KITA HAPUS CORS_PROXY KARENA NODE.JS TIDAK MEMBUTUHKANNYA
-// Fetch langsung ke website target
-
+// Fetcher khusus dengan Header lengkap untuk bypass blokir & cache
 async function fetchPage(targetUrl) {
     const { data } = await axios.get(targetUrl, {
         headers: {
-            // Menambahkan User-Agent PC asli agar web target tidak mengira ini bot
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5'
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
         }
     });
     return cheerio.load(data);
@@ -36,8 +33,12 @@ app.get('/api/home', async (req, res) => {
             const duration = $(el).find('span.duration').text().replace(/[^\d:]/g, '').trim();
             
             if (title && url) {
-                if ($(el).parents('main').length > 0) latest.push({ title, duration, thumbnail, url });
-                if ($(el).parents('aside').length > 0) trending.push({ title, duration, thumbnail, url });
+                // Memisahkan video konten utama (Latest) dan Sidebar (Trending)
+                if ($(el).parents('aside').length > 0 || $(el).parents('.sidebar').length > 0) {
+                    trending.push({ title, duration, thumbnail, url });
+                } else {
+                    latest.push({ title, duration, thumbnail, url });
+                }
             }
         });
 
@@ -55,7 +56,7 @@ app.get('/api/search', async (req, res) => {
 
         const pageNum = parseInt(page);
         
-        // MENGGUNAKAN FORMAT URL ORIGINAL (?s=keyword)
+        // URL asli WordPress (?s=keyword)
         const targetUrl = pageNum > 1 
             ? `https://bokepnoz.in/page/${pageNum}/?s=${encodeURIComponent(q)}` 
             : `https://bokepnoz.in/?s=${encodeURIComponent(q)}`;
@@ -64,6 +65,11 @@ app.get('/api/search', async (req, res) => {
         const results = [];
 
         $('.videos-list article').each((_, el) => {
+            // KUNCI PERBAIKAN: Abaikan artikel jika dia berada di dalam Sidebar/Widget!
+            if ($(el).parents('aside').length > 0 || $(el).parents('.sidebar').length > 0 || $(el).parents('.widget').length > 0) {
+                return; // skip ke elemen berikutnya
+            }
+
             const title = $(el).find('header.entry-header span').text().trim() || $(el).find('.entry-title a').text().trim() || $(el).find('a').attr('title');
             const thumbnail = $(el).find('img.video-main-thumb').attr('src') || $(el).find('img.video-main-thumb').attr('data-src');
             const url = $(el).find('a').attr('href');
@@ -93,6 +99,11 @@ app.get('/api/category', async (req, res) => {
         const results = [];
 
         $('.videos-list article').each((_, el) => {
+            // KUNCI PERBAIKAN: Abaikan artikel jika dia berada di dalam Sidebar/Widget!
+            if ($(el).parents('aside').length > 0 || $(el).parents('.sidebar').length > 0 || $(el).parents('.widget').length > 0) {
+                return; 
+            }
+
             const title = $(el).find('header.entry-header span').text().trim() || $(el).find('.entry-title a').text().trim() || $(el).find('a').attr('title');
             const thumbnail = $(el).find('img.video-main-thumb').attr('src') || $(el).find('img.video-main-thumb').attr('data-src');
             const url = $(el).find('a').attr('href');
@@ -119,12 +130,17 @@ app.get('/api/detail', async (req, res) => {
         const embed = $('.video-player iframe').attr('src') || $('.responsive-player iframe').attr('src');
         
         const related = [];
-        $('.related-videos article, .videos-list article').slice(0, 10).each((_, el) => {
+        $('.related-videos article, .videos-list article').each((_, el) => {
+            if ($(el).parents('aside').length > 0) return; // Abaikan sidebar juga di related videos
+
             const rTitle = $(el).find('header.entry-header span').text().trim() || $(el).find('.entry-title a').text().trim() || $(el).find('a').attr('title');
             const rThumb = $(el).find('img.video-main-thumb').attr('src') || $(el).find('img.video-main-thumb').attr('data-src');
             const rUrl = $(el).find('a').attr('href');
             
-            if (rTitle && rUrl && rUrl !== url) related.push({ title: rTitle, thumbnail: rThumb, url: rUrl });
+            if (rTitle && rUrl && rUrl !== url) {
+                // Limit manual ke maksimal 10
+                if (related.length < 10) related.push({ title: rTitle, thumbnail: rThumb, url: rUrl });
+            }
         });
 
         res.json({ title, embed, related });
