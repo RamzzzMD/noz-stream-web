@@ -192,6 +192,52 @@ function loadTheme() {
     }
 }
 
+function performSearch() {
+    const input = document.getElementById('searchInput');
+    if (!input || !input.value.trim()) return;
+
+    currentQuery = input.value.trim();
+    currentType = 'search';
+    
+    const titleEl = document.getElementById('searchResultTitle');
+    if(titleEl) titleEl.textContent = `Hasil Pencarian: ${currentQuery}`;
+    
+    resetInfinite(); // Kosongkan kontainer dan reset page ke 1
+    loadMore();      // Mulai fetch hasil pencarian
+}
+
+async function loadVideo() {
+    const url = localStorage.getItem('currentVideoUrl');
+    if (!url) {
+        window.location.href = 'index.html'; // Kembalikan jika tidak ada URL yang valid
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/detail?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+
+        // Tampilkan Video & Title
+        if (data.embed) {
+            document.getElementById('player').src = data.embed;
+        } else {
+            console.warn("Embed URL tidak ditemukan.");
+        }
+        
+        if (data.title) {
+            document.getElementById('title').textContent = data.title;
+        }
+
+        // Tampilkan Video Terkait
+        const relatedContainer = document.getElementById('related');
+        if (relatedContainer && data.related) {
+            relatedContainer.innerHTML = data.related.map(v => createVideoCard(v)).join('');
+        }
+    } catch (err) {
+        console.error('Error memuat detail video:', err);
+    }
+}
+
 // Export ke window agar bisa dipakai di HTML lain
 window.playVideo = playVideo;
 window.toggleFavorite = toggleFavorite;
@@ -201,3 +247,5 @@ window.resetInfinite = resetInfinite;
 window.initInfiniteScroll = initInfiniteScroll;
 window.toggleTheme = toggleTheme;
 window.loadTheme = loadTheme;
+window.performSearch = performSearch; // DITAMBAHKAN
+window.loadVideo = loadVideo;         // DITAMBAHKAN
