@@ -164,6 +164,34 @@ async function loadHome() {
     }
 }
 
+function toggleTheme() {
+    const html = document.documentElement;
+    const toggleBtn = document.getElementById('themeToggle');
+    
+    if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+        if (toggleBtn) toggleBtn.innerHTML = `<i class="fas fa-sun text-xl"></i>`;
+    } else {
+        html.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+        if (toggleBtn) toggleBtn.innerHTML = `<i class="fas fa-moon text-xl"></i>`;
+    }
+}
+
+function loadTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    const toggleBtn = document.getElementById('themeToggle');
+    
+    if (savedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+        if (toggleBtn) toggleBtn.innerHTML = `<i class="fas fa-sun text-xl"></i>`;
+    } else {
+        document.documentElement.classList.add('dark');
+        if (toggleBtn) toggleBtn.innerHTML = `<i class="fas fa-moon text-xl"></i>`;
+    }
+}
+
 // Export ke window agar bisa dipakai di HTML lain
 window.playVideo = playVideo;
 window.toggleFavorite = toggleFavorite;
@@ -171,3 +199,5 @@ window.loadHome = loadHome;
 window.loadMore = loadMore;
 window.resetInfinite = resetInfinite;
 window.initInfiniteScroll = initInfiniteScroll;
+window.toggleTheme = toggleTheme;
+window.loadTheme = loadTheme;
