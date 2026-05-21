@@ -3,54 +3,46 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Player - Noz Stream</title>
+  <title>Player - NozStream</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="assets/js/main.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="assets/js/main.js" defer></script>
 </head>
-<body class="bg-zinc-950 text-white">
-  <div class="max-w-7xl mx-auto px-4 py-6">
-    <a href="index.html" class="inline-flex items-center gap-2 text-red-500 mb-6 hover:underline">← Kembali</a>
-    
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <!-- Player -->
-      <div class="lg:col-span-2">
-        <iframe id="player" width="100%" height="500" frameborder="0" allowfullscreen class="bg-black rounded-xl"></iframe>
-        <h1 id="videoTitle" class="text-2xl font-bold mt-5"></h1>
-        <p id="videoInfo" class="text-gray-400 mt-2"></p>
-      </div>
+<body class="bg-zinc-950 text-white dark">
+  <nav class="bg-black/90 backdrop-blur-md border-b border-zinc-800 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+      <a href="index.html" class="flex items-center gap-3">
+        <span class="text-3xl font-bold text-red-600">Noz</span>
+        <span class="text-3xl font-light">Stream</span>
+      </a>
+      <button onclick="toggleTheme()" id="themeToggle" class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-zinc-800">
+        <i class="fas fa-moon"></i>
+      </button>
+    </div>
+  </nav>
 
-      <!-- Related -->
-      <div>
-        <h3 class="font-semibold mb-4 text-lg">Video Terkait</h3>
-        <div id="relatedContainer" class="space-y-4"></div>
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <a href="index.html" class="inline-flex items-center gap-2 mb-6 text-red-500 hover:underline">
+      ← Kembali ke Home
+    </a>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div class="lg:col-span-8">
+        <iframe id="player" width="100%" height="520" class="bg-black rounded-2xl" frameborder="0" allowfullscreen></iframe>
+        <h1 id="title" class="text-2xl font-bold mt-6"></h1>
+      </div>
+      <div class="lg:col-span-4">
+        <h3 class="font-semibold mb-4">Video Terkait</h3>
+        <div id="related" class="space-y-4"></div>
       </div>
     </div>
   </div>
 
   <script>
-    async function loadVideo() {
-      const url = localStorage.getItem('currentVideoUrl');
-      if (!url) return;
-
-      try {
-        const res = await fetch(`https://noz-stream-web.vercel.app/api/detail?url=${encodeURIComponent(url)}`);
-        const data = await res.json();
-
-        document.getElementById('player').src = data.embed_url;
-        document.getElementById('videoTitle').textContent = data.title;
-        document.getElementById('videoInfo').innerHTML = `
-          ${data.duration} • ${data.upload_date}
-        `;
-
-        // Render Related
-        const container = document.getElementById('relatedContainer');
-        container.innerHTML = data.related.map(v => createVideoCard(v)).join('');
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    loadVideo();
+    window.onload = () => {
+      loadTheme();
+      loadVideo();
+    };
   </script>
 </body>
 </html>
