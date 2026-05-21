@@ -146,4 +146,29 @@ app.get('/api/detail', async (req, res) => {
         $('div.under-video-block article').each((_, el) => {
             const t = $(el).find('header.entry-header span').text().trim();
             const c = $(el).find('img.video-main-thumb').attr('src') || $(el).find('img.video-main-thumb').attr('data-src');
-            const u = $(el).find('a').attr
+            const u = $(el).find('a').attr('href');
+            const dur = $(el).find('span.duration').text().replace(/[^\d:]/g, '').trim();
+            const v = $(el).find('span.views').text().replace(/[^\d.KMB]/g, '').trim();
+            if (t && u) related.push({ title: t, duration: dur, views: v, thumbnail: c, url: u });
+        });
+        
+        res.json({ 
+            title, 
+            cover, 
+            duration, 
+            embed: embed_url, // Dimasukkan dengan key 'embed' agar sinkron dengan javascript frontend
+            download_url: embed_url?.replace('/e/', '/d/'), 
+            tags, 
+            related 
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Catch all route
+app.all('*', (req, res) => {
+    res.status(404).json({ error: 'Route not found' });
+});
+
+module.exports = app;
