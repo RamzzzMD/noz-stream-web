@@ -10,8 +10,14 @@ app.use(cors());
 const CORS_PROXY = 'https://cloudflare-cors-anywhere.supershadowcube.workers.dev/?url=';
 
 // Helper function
-async function fetchPage(url) {
-    const { data } = await axios.get(CORS_PROXY + url);
+async function fetchPage(targetUrl) {
+    // WAJIB menggunakan encodeURIComponent agar parameter seperti ?s= tidak terputus oleh proxy
+    const proxyUrl = CORS_PROXY + encodeURIComponent(targetUrl);
+    const { data } = await axios.get(proxyUrl, {
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+    });
     return cheerio.load(data);
 }
 
@@ -21,20 +27,17 @@ app.get('/api/home', async (req, res) => {
         const $ = await fetchPage('https://bokepnoz.in/');
         const latest = [], trending = [];
 
-        $('main div.videos-list article').each((_, el) => {
-            const title = $(el).find('header.entry-header span').text().trim() || $(el).find('.entry-title a').text().trim();
+        $('.videos-list article').each((_, el) => {
+            const title = $(el).find('header.entry-header span').text().trim() || $(el).find('.entry-title a').text().trim() || $(el).find('a').attr('title');
             const thumbnail = $(el).find('img.video-main-thumb').attr('src') || $(el).find('img.video-main-thumb').attr('data-src');
             const url = $(el).find('a').attr('href');
             const duration = $(el).find('span.duration').text().replace(/[^\d:]/g, '').trim();
-            if (title && url) latest.push({ title, duration, thumbnail, url });
-        });
-
-        $('aside div.videos-list article').each((_, el) => {
-            const title = $(el).find('header.entry-header span').text().trim() || $(el).find('.entry-title a').text().trim();
-            const thumbnail = $(el).find('img.video-main-thumb').attr('src') || $(el).find('img.video-main-thumb').attr('data-src');
-            const url = $(el).find('a').attr('href');
-            const duration = $(el).find('span.duration').text().replace(/[^\d:]/g, '').trim();
-            if (title && url) trending.push({ title, duration, thumbnail, url });
+            
+            // Masukkan ke array sesuai section
+            if (title && url) {
+                if ($(el).parents('main').length > 0) latest.push({ title, duration, thumbnail, url });
+                if ($(el).parents('aside').length > 0) trending.push({ title, duration, thumbnail, url });
+            }
         });
 
         res.json({ latest, trending });
@@ -49,14 +52,22 @@ app.get('/api/search', async (req, res) => {
         const { q, page = 1 } = req.query;
         if (!q) return res.status(400).json({ error: 'Query required' });
 
-        const $ = await fetchPage(`https://bokepnoz.in/page/${page}/?s=${encodeURIComponent(q)}`);
+        // Fix halaman 1 (WordPress biasanya memblokir /page/1/)
+        const pageNum = parseInt(page);
+        const targetUrl = pageNum > 1 
+            ? `https://bokepnoz.in/page/${pageNum}/?s=${encodeURIComponent(q)}` 
+            : `https://bokepnoz.in/?s=${encodeURIComponent(q)}`;
+
+        const $ = await fetchPage(targetUrl);
         const results = [];
 
-        $('main div.videos-list article').each((_, el) => {
-            const title = $(el).find('header.entry-header span').text().trim() || $(el).find('.entry-title a').text().trim();
+        // Selector dilonggarkan menjadi .videos-list article saja
+        $('.videos-list article').each((_, el) => {
+            const title = $(el).find('header.entry-header span').text().trim() || $(el).find('.entry-title a').text().trim() || $(el).find('a').attr('title');
             const thumbnail = $(el).find('img.video-main-thumb').attr('src') || $(el).find('img.video-main-thumb').attr('data-src');
             const url = $(el).find('a').attr('href');
             const duration = $(el).find('span.duration').text().replace(/[^\d:]/g, '').trim();
+            
             if (title && url) results.push({ title, duration, thumbnail, url });
         });
 
@@ -72,14 +83,20 @@ app.get('/api/category', async (req, res) => {
         const { slug, page = 1 } = req.query;
         if (!slug) return res.status(400).json({ error: 'Slug required' });
 
-        const $ = await fetchPage(`https://bokepnoz.in/category/${slug}/page/${page}/`);
+        const pageNum = parseInt(page);
+        const targetUrl = pageNum > 1 
+            ? `https://bokepnoz.in/category/${slug}/page/${pageNum}/` 
+            : `https://bokepnoz.in/category/${slug}/`;
+
+        const $ = await fetchPage(targetUrl);
         const results = [];
 
-        $('main div.videos-list article').each((_, el) => {
-            const title = $(el).find('header.entry-header span').text().trim() || $(el).find('.entry-title a').text().trim();
+        $('.videos-list article').each((_, el) => {
+            const title = $(el).find('header.entry-header span').text().trim() || $(el).find('.entry-title a').text().trim() || $(el).find('a').attr('title');
             const thumbnail = $(el).find('img.video-main-thumb').attr('src') || $(el).find('img.video-main-thumb').attr('data-src');
             const url = $(el).find('a').attr('href');
             const duration = $(el).find('span.duration').text().replace(/[^\d:]/g, '').trim();
+            
             if (title && url) results.push({ title, duration, thumbnail, url });
         });
 
@@ -98,15 +115,16 @@ app.get('/api/detail', async (req, res) => {
         const $ = await fetchPage(url);
         
         const title = $('h1.entry-title').text().trim();
-        // Mengambil link embed iframe player
         const embed = $('.video-player iframe').attr('src') || $('.responsive-player iframe').attr('src');
         
         const related = [];
         $('.related-videos article, .videos-list article').slice(0, 10).each((_, el) => {
-            const rTitle = $(el).find('header.entry-header span').text().trim() || $(el).find('.entry-title a').text().trim();
+            const rTitle = $(el).find('header.entry-header span').text().trim() || $(el).find('.entry-title a').text().trim() || $(el).find('a').attr('title');
             const rThumb = $(el).find('img.video-main-thumb').attr('src') || $(el).find('img.video-main-thumb').attr('data-src');
             const rUrl = $(el).find('a').attr('href');
-            if (rTitle && rUrl) related.push({ title: rTitle, thumbnail: rThumb, url: rUrl });
+            
+            // Jangan masukkan video itu sendiri ke dalam list related
+            if (rTitle && rUrl && rUrl !== url) related.push({ title: rTitle, thumbnail: rThumb, url: rUrl });
         });
 
         res.json({ title, embed, related });
