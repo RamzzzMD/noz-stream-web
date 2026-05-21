@@ -29,8 +29,10 @@
   <main class="max-w-7xl mx-auto px-6 py-10">
     <div class="max-w-2xl mx-auto mb-10">
       <div class="relative">
+        
         <input id="searchInput" type="text" placeholder="Cari judul atau keyword..." 
-               class="w-full bg-zinc-900 border border-zinc-700 focus:border-red-600 rounded-2xl py-5 px-6 text-lg outline-none">
+               class="w-full bg-zinc-900 border border-zinc-700 focus:border-red-600 rounded-2xl py-5 px-6 text-lg outline-none"
+               onkeydown="if(event.key === 'Enter') performSearch()">
         <button onclick="performSearch()" class="absolute right-4 top-1/2 -translate-y-1/2 bg-red-600 hover:bg-red-700 px-8 py-3 rounded-xl">
           <i class="fas fa-search"></i>
         </button>
