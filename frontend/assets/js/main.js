@@ -1,5 +1,5 @@
 // ================== KONFIGURASI ==================
-const API_BASE = ''; // Kosongkan karena kita pakai relative path di Vercel
+const API_BASE = 'https://noz-stream-web.vercel.app'; // Kosongkan karena kita pakai relative path di Vercel
 
 // State Global
 let currentPage = 1;
