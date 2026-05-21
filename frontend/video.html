@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Player - Noz Stream</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/js/main.js"></script>
+</head>
+<body class="bg-zinc-950 text-white">
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <a href="index.html" class="inline-flex items-center gap-2 text-red-500 mb-6 hover:underline">← Kembali</a>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Player -->
+      <div class="lg:col-span-2">
+        <iframe id="player" width="100%" height="500" frameborder="0" allowfullscreen class="bg-black rounded-xl"></iframe>
+        <h1 id="videoTitle" class="text-2xl font-bold mt-5"></h1>
+        <p id="videoInfo" class="text-gray-400 mt-2"></p>
+      </div>
+
+      <!-- Related -->
+      <div>
+        <h3 class="font-semibold mb-4 text-lg">Video Terkait</h3>
+        <div id="relatedContainer" class="space-y-4"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function loadVideo() {
+      const url = localStorage.getItem('currentVideoUrl');
+      if (!url) return;
+
+      try {
+        const res = await fetch(`https://YOUR-VERCEL-URL.vercel.app/api/detail?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+
+        document.getElementById('player').src = data.embed_url;
+        document.getElementById('videoTitle').textContent = data.title;
+        document.getElementById('videoInfo').innerHTML = `
+          ${data.duration} • ${data.upload_date}
+        `;
+
+        // Render Related
+        const container = document.getElementById('relatedContainer');
+        container.innerHTML = data.related.map(v => createVideoCard(v)).join('');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    loadVideo();
+  </script>
+</body>
+</html>
