@@ -1,12 +1,13 @@
 // ================== KONFIGURASI ==================
-const API_BASE = 'https://noz-stream-web.vercel.app'; // Kosongkan karena kita pakai relative path di Vercel
+// Kosongkan karena kita pakai relative path di Vercel (/api/...)
+const API_BASE = 'noz-stream-web.vercel.app/api'; 
 
 // State Global
 let currentPage = 1;
 let isLoading = false;
 let hasMore = true;
 let currentQuery = '';
-let currentType = 'home';     // home | search | category
+let currentType = 'home'; 
 let currentSlug = '';
 
 let history = JSON.parse(localStorage.getItem('watchHistory')) || [];
@@ -33,23 +34,28 @@ function toggleFavorite(video) {
 
 function createVideoCard(video) {
     const isFav = favorites.some(v => v.url === video.url);
+    const safeVideo = JSON.stringify(video).replace(/"/g, '&quot;');
+    const thumbUrl = video.thumbnail || 'https://via.placeholder.com/300x169/000000/FFFFFF?text=No+Thumbnail';
+
     return `
-        <div class="group relative cursor-pointer" onclick="playVideo('${video.url}', ${JSON.stringify(video).replace(/"/g, '&quot;')})">
-            <div class="relative overflow-hidden rounded-xl aspect-video bg-black">
-                <img src="${video.thumbnail}" 
-                     class="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300">
-                <span class="absolute bottom-2 right-2 bg-black/80 text-xs px-2 py-1 rounded font-mono">
-                    ${video.duration}
+        <div class="group relative cursor-pointer" onclick="playVideo('${video.url}', ${safeVideo})">
+            <div class="relative overflow-hidden rounded-xl aspect-video bg-zinc-900 border border-zinc-800">
+                <img src="${thumbUrl}" alt="${video.title}" loading="lazy"
+                     class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 group-hover:opacity-80">
+                <span class="absolute bottom-2 right-2 bg-black/90 text-xs px-2 py-1 rounded-md font-mono font-bold tracking-wider">
+                    ${video.duration || '00:00'}
                 </span>
-                <button onclick="event.stopImmediatePropagation(); toggleFavorite(${JSON.stringify(video).replace(/"/g, '&quot;')});" 
-                        class="absolute top-2 right-2 text-2xl transition ${isFav ? 'text-red-500 scale-110' : 'text-white/60 hover:text-red-500'}">
+                <button onclick="event.stopImmediatePropagation(); toggleFavorite(${safeVideo});" 
+                        class="absolute top-2 right-2 text-2xl drop-shadow-md transition ${isFav ? 'text-red-500 scale-110' : 'text-white/40 hover:text-red-500'}">
                     ❤️
                 </button>
             </div>
-            <p class="mt-3 line-clamp-2 text-sm font-medium leading-tight group-hover:text-red-500">
+            <h3 class="mt-3 line-clamp-2 text-sm font-semibold leading-tight text-zinc-200 group-hover:text-red-500 transition-colors">
                 ${video.title}
+            </h3>
+            <p class="text-xs text-zinc-500 mt-1.5 flex items-center gap-1.5">
+                <i class="fas fa-eye"></i> ${video.views || 'N/A'}
             </p>
-            <p class="text-xs text-gray-400 mt-1">${video.views || ''}</p>
         </div>
     `;
 }
@@ -58,6 +64,41 @@ function playVideo(url, videoData = null) {
     if (videoData) saveToHistory(videoData);
     localStorage.setItem('currentVideoUrl', url);
     window.location.href = 'video.html';
+}
+
+// ================== SEARCH & VIDEO ==================
+function performSearch() {
+    const input = document.getElementById('searchInput');
+    if (!input || !input.value.trim()) return;
+
+    currentQuery = input.value.trim();
+    currentType = 'search';
+    
+    const titleEl = document.getElementById('searchResultTitle');
+    if(titleEl) titleEl.textContent = `Pencarian: "${currentQuery}"`;
+    
+    resetInfinite();
+    loadMore();
+}
+
+async function loadVideo() {
+    const url = localStorage.getItem('currentVideoUrl');
+    if (!url) return window.location.href = 'index.html';
+
+    try {
+        const res = await fetch(`/api/detail?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+
+        if (data.embed) document.getElementById('player').src = data.embed;
+        if (data.title) document.getElementById('title').textContent = data.title;
+
+        const relatedContainer = document.getElementById('related');
+        if (relatedContainer && data.related) {
+            relatedContainer.innerHTML = data.related.map(v => createVideoCard(v)).join('');
+        }
+    } catch (err) {
+        console.error('Error memuat video:', err);
+    }
 }
 
 // ================== INFINITE SCROLL ==================
@@ -70,36 +111,31 @@ async function loadMore() {
 
     try {
         let endpoint = '';
-
         if (currentType === 'search' && currentQuery) {
             endpoint = `/api/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}`;
-        } 
-        else if (currentType === 'category' && currentSlug) {
+        } else if (currentType === 'category' && currentSlug) {
             endpoint = `/api/category?slug=${currentSlug}&page=${currentPage}`;
-        } 
-        else {
+        } else {
             return;
         }
 
         const res = await fetch(endpoint);
         const data = await res.json();
-
         const container = document.getElementById('videoContainer');
-        const results = data.results || data.latest || [];
+        const results = data.results || [];
 
         if (results.length === 0) {
             hasMore = false;
+            if (currentPage === 1 && container) {
+                container.innerHTML = '<p class="text-zinc-500 col-span-full">Tidak ada video ditemukan.</p>';
+            }
             return;
         }
 
-        results.forEach(video => {
-            container.innerHTML += createVideoCard(video);
-        });
-
+        results.forEach(video => { container.innerHTML += createVideoCard(video); });
         currentPage++;
 
     } catch (err) {
-        console.error('Error loading more:', err);
         hasMore = false;
     } finally {
         isLoading = false;
@@ -109,12 +145,8 @@ async function loadMore() {
 
 function initInfiniteScroll() {
     const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-            loadMore();
-        }
-    }, {
-        rootMargin: '300px'
-    });
+        if (entries[0].isIntersecting && hasMore) loadMore();
+    }, { rootMargin: '300px' });
 
     const sentinel = document.getElementById('sentinel');
     if (sentinel) observer.observe(sentinel);
@@ -134,27 +166,25 @@ async function loadHome() {
         const res = await fetch('/api/home');
         const data = await res.json();
 
-        // Latest
         const latestContainer = document.getElementById('latest-section');
-        if (latestContainer) {
+        if (latestContainer && data.latest) {
             latestContainer.innerHTML = `
-                <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
-                    <span class="text-red-500">▶</span> Terbaru
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                    <i class="fas fa-play-circle text-red-500"></i> Terbaru
                 </h2>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     ${data.latest.map(v => createVideoCard(v)).join('')}
                 </div>
             `;
         }
 
-        // Trending
         const trendingContainer = document.getElementById('trending-section');
-        if (trendingContainer) {
+        if (trendingContainer && data.trending) {
             trendingContainer.innerHTML = `
-                <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
-                    <span class="text-red-500">🔥</span> Trending
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                    <i class="fas fa-fire text-red-500"></i> Sedang Trending
                 </h2>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     ${data.trending.map(v => createVideoCard(v)).join('')}
                 </div>
             `;
@@ -164,6 +194,7 @@ async function loadHome() {
     }
 }
 
+// ================== THEME ==================
 function toggleTheme() {
     const html = document.documentElement;
     const toggleBtn = document.getElementById('themeToggle');
@@ -180,7 +211,7 @@ function toggleTheme() {
 }
 
 function loadTheme() {
-    const savedTheme = localStorage.getItem('theme');
+    const savedTheme = localStorage.getItem('theme') || 'dark'; // Default Dark
     const toggleBtn = document.getElementById('themeToggle');
     
     if (savedTheme === 'light') {
@@ -192,53 +223,7 @@ function loadTheme() {
     }
 }
 
-function performSearch() {
-    const input = document.getElementById('searchInput');
-    if (!input || !input.value.trim()) return;
-
-    currentQuery = input.value.trim();
-    currentType = 'search';
-    
-    const titleEl = document.getElementById('searchResultTitle');
-    if(titleEl) titleEl.textContent = `Hasil Pencarian: ${currentQuery}`;
-    
-    resetInfinite(); // Kosongkan kontainer dan reset page ke 1
-    loadMore();      // Mulai fetch hasil pencarian
-}
-
-async function loadVideo() {
-    const url = localStorage.getItem('currentVideoUrl');
-    if (!url) {
-        window.location.href = 'index.html'; // Kembalikan jika tidak ada URL yang valid
-        return;
-    }
-
-    try {
-        const res = await fetch(`/api/detail?url=${encodeURIComponent(url)}`);
-        const data = await res.json();
-
-        // Tampilkan Video & Title
-        if (data.embed) {
-            document.getElementById('player').src = data.embed;
-        } else {
-            console.warn("Embed URL tidak ditemukan.");
-        }
-        
-        if (data.title) {
-            document.getElementById('title').textContent = data.title;
-        }
-
-        // Tampilkan Video Terkait
-        const relatedContainer = document.getElementById('related');
-        if (relatedContainer && data.related) {
-            relatedContainer.innerHTML = data.related.map(v => createVideoCard(v)).join('');
-        }
-    } catch (err) {
-        console.error('Error memuat detail video:', err);
-    }
-}
-
-// Export ke window agar bisa dipakai di HTML lain
+// Global Export
 window.playVideo = playVideo;
 window.toggleFavorite = toggleFavorite;
 window.loadHome = loadHome;
@@ -247,5 +232,5 @@ window.resetInfinite = resetInfinite;
 window.initInfiniteScroll = initInfiniteScroll;
 window.toggleTheme = toggleTheme;
 window.loadTheme = loadTheme;
-window.performSearch = performSearch; // DITAMBAHKAN
-window.loadVideo = loadVideo;         // DITAMBAHKAN
+window.performSearch = performSearch;
+window.loadVideo = loadVideo;
