@@ -59,8 +59,8 @@ app.get('/api/search', async (req, res) => {
         const qFormatted = encodeURIComponent(q.trim().replace(/\s+/g, '+'));
         
         const targetUrl = pageNum > 1 
-            ? `https://bokepnoz.in/search/${qFormatted}/page/${pageNum}/` 
-            : `https://bokepnoz.in/search/${qFormatted}/`;
+            ? `https://bokepnoz.in/?s${qFormatted}/page/${pageNum}/` 
+            : `https://bokepnoz.in/?s${qFormatted}/`;
 
         const $ = await fetchPage(targetUrl);
         const results = [];
